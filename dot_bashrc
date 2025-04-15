@@ -129,6 +129,16 @@ if command -v pipx &> /dev/null && command -v register-python-argcomplete &> /de
     eval "$(register-python-argcomplete pipx)"
 fi
 
+if [ -d "$HOME/.bash_completions" ]; then
+  for file in "$HOME"/.bash_completions/*.bash; do
+    [ -r "$file" ] && source "$file"
+  done
+fi
+
+if command -v pipx &> /dev/null && command -v register-python-argcomplete &> /dev/null; then
+    eval "$(register-python-argcomplete pipx)"
+fi
+
 if [ -x /home/linuxbrew/.linuxbrew/bin/brew ]; then
   eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 fi
