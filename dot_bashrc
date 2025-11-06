@@ -158,3 +158,5 @@ case ":$PATH:" in
 esac
 # pnpm end
 . "$HOME/.cargo/env"
+
+umask 022
