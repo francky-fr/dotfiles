@@ -16,3 +16,5 @@ end
 bind \t tab_complete
 
 fish_add_path $HOME/.cargo/bin
+
+umask 022
