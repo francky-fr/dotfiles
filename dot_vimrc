@@ -1,0 +1,77 @@
+source ~/.vim/highlight.vim
+source ~/.vim/nerd_commenter.vim
+au FileType python source ~/.vim/python.vim
+"au FileType json source ~/.vim/json-formatter.vim/plugin/json_formatter.vim
+au! BufNewFile,BufReadPost *.{yaml,yml} set filetype=yaml
+autocmd FileType yaml setlocal ts=2 sts=2 sw=2 expandtab
+autocmd FileType json setlocal ts=2 sts=2 sw=2 expandtab
+
+set runtimepath+=~/.vim/bundle/neobundle.vim/
+call neobundle#begin(expand('~/.vim/bundle/'))
+NeoBundleFetch 'Shougo/neobundle.vim'
+call neobundle#add('rhysd/vim-fixjson', {'lazy' : 0,  'autoload' : {'filetypes' : 'json'}})
+call neobundle#add('pseewald/vim-anyfold', {'lazy' : 0,  'autoload' : {'filetypes' : 'json'}})
+call neobundle#add('folke/noice.nvim')
+call neobundle#end()
+filetype plugin indent on
+NeoBundleCheck
+
+"set foldmethod=syntax
+autocmd FileType * AnyFoldActivate
+set foldlevel=2  " close all folds
+set nocompatible
+"set expandtab " Replace tab by good number of spaces
+"set cindent "Commentend, replaced by smartindent/autoindent
+set smartindent
+set autoindent
+set nofoldenable
+
+syn on
+set hlsearch
+syntax on
+set background=light
+filetype plugin on
+
+let &t_SI .= "\<Esc>[?2004h"
+let &t_EI .= "\<Esc>[?2004l"
+inoremap <special> <expr> <Esc>[200~ XTermPasteBegin()
+function! XTermPasteBegin()
+    set pastetoggle=<Esc>[201~
+    set paste
+    return ""
+endfunction
+
+"command AF AnyFoldActivate
+command AF set foldlevel=2 
+
+inoremap <special> <expr> <Esc>[200~ XTermPasteBegin()
+
+map cc :call NERDComment(0,"Comment")<C-m>
+map cu :call NERDComment(0,"Uncomment")<C-m>
+
+""" AUTOCOMP
+let g:tab_completion_keys = "\<c-x>\<c-p>"
+function! TabCompletion()
+  let l:col = max([col('.')-1, 1])
+  let l:char = matchstr(getline('.'), '\%' . l:col . 'c.')
+  if l:char =~# '\k'
+    return g:tab_completion_keys
+  else
+    return "\<tab>"
+  endif
+endfunction
+"""
+
+inoremap <C-x>t <C-x><C-f>
+
+
+au FileType c,python highlight Space ctermbg=darkblue guibg=darkblue
+au FileType c,python au BufWinEnter * let w:m3=matchadd('Space', '\s\+$\| \+\ze\t', -1)
+
+autocmd BufReadPost *
+	\ if line("'\"") > 0 && line("'\"") <= line("$") |
+	\	exe "normal! g`\"" |
+	\ endif
+
+" Hack to avoid highliting underscore in .md file
+hi link markdownError Normal
