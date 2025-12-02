@@ -18,3 +18,6 @@ bind \t tab_complete
 fish_add_path $HOME/.cargo/bin
 
 umask 022
+
+# Created by `pipx` on 2025-11-24 10:46:19
+set PATH $PATH /home/franck/.local/bin

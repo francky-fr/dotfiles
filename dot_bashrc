@@ -111,7 +111,6 @@ fi
 for dir in \
   "$HOME/.local/bin" \
   "$HOME/.npm-global/bin" \
-  "$HOME/.cargo/bin" \
   "/usr/bin/Postman" \
   "/usr/local/go/bin"
 do
@@ -157,6 +156,6 @@ case ":$PATH:" in
   *) export PATH="$PNPM_HOME:$PATH" ;;
 esac
 # pnpm end
-. "$HOME/.cargo/env"
 
 umask 022
+. "$HOME/.cargo/env"
