@@ -391,7 +391,7 @@ local function dapui_apply_min_size()
     local buf = vim.api.nvim_win_get_buf(win)
     local ft  = vim.bo[buf].filetype
 
-    if ft == "dapui_repl"
+    if ft == "dapui-repl"
       or ft == "dapui_console"
       or ft == "dapui_watches"
       or ft == "dapui_stacks"
@@ -526,6 +526,10 @@ local function dapui_apply_min_size()
     end
   end
 end
+
+vim.api.nvim_create_autocmd("VimResized", {
+  callback = dapui_apply_min_size,
+})
 
 ---------------------------------------------------------------------
 -- OUVERTURE / FERMETURE AUTOMATIQUE (SEULE MODIF : setup AVANT open)
