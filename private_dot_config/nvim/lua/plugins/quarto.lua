@@ -5,7 +5,7 @@ return {
   ---------------------------------------------------------------------------
   {
     "quarto-dev/quarto-nvim",
-    ft = { "quarto", "markdown" },
+    ft = { "quarto", "markdown" , "go"},
 
     config = function()
       -----------------------------------------------------------------------
@@ -62,12 +62,32 @@ return {
   -- 3) Slime (envoyer code au REPL)
   ---------------------------------------------------------------------------
   {
-    "jpalardy/vim-slime",
-    init = function()
-      vim.g.slime_target = "neovim"
-      vim.g.slime_no_mappings = true
-      vim.g.slime_bracketed_paste = 1
-    end,
+	  "jpalardy/vim-slime",
+
+	  init = function()
+		  -- vim.g.slime_target = "neovim"
+		  vim.g.slime_target = "tmux"
+		  vim.g.slime_default_config = {
+			  -- target_pane = "go-repl-lab:repls.0",
+			  -- target_pane = "go-repl-lab:repls.2",
+			  -- target_pane = "go-repl-lab:yaegi-A.0",
+			  -- target_pane = "go-repl-lab:gomacro-A.0",
+			  target_pane = "go-repl-lab:yaegi-B.0",
+			  socket_name = "default",
+		  }
+		  vim.g.slime_dont_ask_default = 1
+		  vim.g.slime_no_mappings = true
+		  vim.g.slime_bracketed_paste = 1
+	  end,
+
+	  config = function()
+
+		  vim.keymap.set("v", "rr", "<Plug>SlimeRegionSend", { silent = true })
+		  vim.keymap.set("n", "rr", "<Plug>SlimeLineSend", { silent = true })
+		  vim.keymap.set("n", "rf", ":%SlimeSend<CR>", { silent = true })
+		  vim.keymap.set("n", "r", "<nop>", { noremap = true })
+
+	  end,
   },
 
   ---------------------------------------------------------------------------
