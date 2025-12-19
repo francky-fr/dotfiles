@@ -1,0 +1,196 @@
+-- lua/dap-setup.lua
+--
+-- DAP Go setup STABLE :
+-- - Telescope pour choisir cmd/*
+-- - Input args simple (vim.fn.input)
+-- - Breakpoints & ligne courante bien visibles
+-- - État DAP (Running / Stopped) dans la statusline
+
+local dap = require("dap")
+
+---------------------------------------------------------------------
+-- BREAKPOINTS & LIGNE COURANTE : VISIBILITÉ FORTE
+---------------------------------------------------------------------
+
+vim.fn.sign_define("DapBreakpoint", {
+  text = "●",
+  texthl = "DapBreakpoint",
+  linehl = "DapBreakpointLine",
+  numhl = "",
+})
+
+vim.fn.sign_define("DapBreakpointCondition", {
+  text = "◆",
+  texthl = "DapBreakpointCondition",
+  linehl = "DapBreakpointLine",
+  numhl = "",
+})
+
+vim.fn.sign_define("DapStopped", {
+  text = "▶",
+  texthl = "DapStopped",
+  linehl = "DapStoppedLine",
+  numhl = "",
+})
+
+vim.api.nvim_set_hl(0, "DapBreakpoint", { fg = "#ff5555", bold = true })
+vim.api.nvim_set_hl(0, "DapBreakpointCondition", { fg = "#ffaa00", bold = true })
+vim.api.nvim_set_hl(0, "DapBreakpointLine", { bg = "#3a1f1f" })
+
+vim.api.nvim_set_hl(0, "DapStopped", { fg = "#50fa7b", bold = true })
+vim.api.nvim_set_hl(0, "DapStoppedLine", { bg = "#1f3a2f" })
+
+---------------------------------------------------------------------
+-- ÉTAT DAP (RUNNING / STOPPED) DANS LA STATUSLINE
+---------------------------------------------------------------------
+
+_G.dap_status = function()
+  if dap.session() then
+    return " 🐞 " .. dap.status()
+  end
+  return ""
+end
+
+vim.api.nvim_create_autocmd("User", {
+  pattern = "DAP*",
+  callback = function()
+    vim.cmd("redrawstatus")
+  end,
+})
+
+vim.o.statusline = vim.o.statusline .. "%{v:lua.dap_status()}"
+
+---------------------------------------------------------------------
+-- ÉTAT MÉMOIRE : DERNIÈRE COMMANDE GO
+---------------------------------------------------------------------
+
+local last_go = {
+  program = nil,
+  args = {},
+}
+
+---------------------------------------------------------------------
+-- CONFIGURATION DAP GO
+---------------------------------------------------------------------
+
+dap.configurations.go = {
+  {
+    type = "go",
+    name = "Debug Go (cmd)",
+    request = "launch",
+    program = function()
+      return last_go.program
+    end,
+    args = function()
+      return last_go.args
+    end,
+  },
+}
+
+---------------------------------------------------------------------
+-- TELESCOPE : CHOISIR cmd/*
+---------------------------------------------------------------------
+
+vim.api.nvim_create_user_command("GoDebugSet", function()
+  local pickers = require("telescope.pickers")
+  local finders = require("telescope.finders")
+  local conf = require("telescope.config").values
+  local actions = require("telescope.actions")
+  local action_state = require("telescope.actions.state")
+
+  pickers.new({}, {
+    prompt_title = "Go commands (cmd/*)",
+    finder = finders.new_oneshot_job({
+      "find", "cmd", "-maxdepth", "2", "-type", "d",
+    }),
+    sorter = conf.generic_sorter({}),
+    attach_mappings = function(_, map)
+      map("i", "<CR>", function(bufnr)
+        local entry = action_state.get_selected_entry()
+        actions.close(bufnr)
+
+        last_go.program = vim.fn.getcwd() .. "/" .. entry[1]
+
+        local args = vim.fn.input(
+          "Args: ",
+          table.concat(last_go.args, " ")
+        )
+
+        last_go.args = args ~= "" and vim.split(args, " ") or {}
+        dap.run(dap.configurations.go[1])
+      end)
+      return true
+    end,
+  }):find()
+end, {})
+
+---------------------------------------------------------------------
+-- RELANCER SANS PROMPT
+---------------------------------------------------------------------
+
+vim.api.nvim_create_user_command("GoDebugRun", function()
+  if not last_go.program then
+    vim.notify("No Go debug configuration yet", vim.log.levels.WARN)
+    return
+  end
+  dap.run(dap.configurations.go[1])
+end, {})
+
+---------------------------------------------------------------------
+-- KEYMAPS
+---------------------------------------------------------------------
+
+-- Choisir / changer la commande
+vim.keymap.set("n", "<leader>dr", "<Cmd>GoDebugSet<CR>",
+  { desc = "DAP: pick Go command (Telescope)" })
+
+-- Relancer
+vim.keymap.set("n", "<F5>", function()
+  dap.run_last()
+end, { desc = "DAP: rerun last" })
+
+-- Breakpoints
+vim.keymap.set("n", "<F9>", function()
+  dap.toggle_breakpoint()
+end)
+
+-- Step
+vim.keymap.set("n", "<F10>", function()
+  dap.step_over()
+end)
+
+vim.keymap.set("n", "<F11>", function()
+  dap.step_into()
+end)
+
+vim.keymap.set("n", "<F12>", function()
+  dap.step_out()
+end)
+
+-- Stop
+vim.keymap.set("n", "<F8>", function()
+  dap.terminate()
+end)
+
+-- Empêcher les restarts successifs trop rapides
+local restart_in_progress = false
+local restart_cooldown = 500 -- millisecondes
+
+local function safe_restart()
+    if restart_in_progress then
+        vim.notify("⏳ Restart déjà en cours, patience...", vim.log.levels.WARN)
+        return
+    end
+    
+    restart_in_progress = true
+    require('dap').restart()
+    
+    -- Débloquer après le cooldown
+    vim.defer_fn(function()
+        restart_in_progress = false
+    end, restart_cooldown)
+end
+
+-- Remplacer tous tes appels à dap.restart() par safe_restart()
+vim.keymap.set("n", "<F6>", safe_restart, { desc = "DAP: Safe Restart" })
+
