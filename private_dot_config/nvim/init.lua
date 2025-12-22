@@ -81,61 +81,7 @@ require("lazy").setup({
         "nvim-telescope/telescope-symbols.nvim",
         "xiyaowong/telescope-emoji.nvim",
 
-	{
-		"mfussenegger/nvim-dap",
-		config = function()
-			require("dap-setup")
-		end,
-	},
-	-- {
-	-- 	"leoluz/nvim-dap-go",
-	-- 	ft = "go",
-	-- 	dependencies = { "mfussenegger/nvim-dap" },
-	-- 	config = function()
-	-- 		require("dap-go").setup()
-	-- 	end,
-	-- },
-	{
-		"leoluz/nvim-dap-go",
-		ft = "go",
-		dependencies = { "mfussenegger/nvim-dap" },
-		config = function()
-			require("dap-go").setup({
-				-- Désactive les optimisations pour un meilleur debug
-				delve = {
-					-- Chemin vers delve (optionnel si dans PATH)
-					path = "dlv",
-					-- Arguments de build
-					initialize_timeout_sec = 20,
-					port = "${port}",
-					args = {},
-					build_flags = "-gcflags='all=-N -l'",
-				},
-				-- Configuration des types de debug
-				dap_configurations = {
-					{
-						type = "go",
-						name = "Debug",
-						request = "launch",
-						program = "${file}",
-					},
-					{
-						type = "go",
-						name = "Debug Package",
-						request = "launch",
-						program = "${fileDirname}",
-					},
-					{
-						type = "go",
-						name = "Debug Test",
-						request = "launch",
-						mode = "test",
-						program = "${file}",
-					},
-				},
-			})
-		end,
-	},
+
 	{
 		"folke/snacks.nvim",
 		priority = 1000,
@@ -163,49 +109,6 @@ require("lazy").setup({
 		"farmergreg/vim-lastplace",
 		event = "BufReadPost",
 	},
-	{
-		"rcarriga/nvim-dap-ui",
-		dependencies = {
-			"mfussenegger/nvim-dap",
-			"nvim-neotest/nvim-nio",
-		},
-		config = function()
-			require("dapui").setup({
-				layouts = {
-					{
-						elements = {
-							{ id = "scopes", size = 0.45 },
-							{ id = "watches", size = 0.25 },
-							{ id = "stacks", size = 0.15 },
-							{ id = "breakpoints", size = 0.15 },
-						},
-						size = 40,
-						position = "left",
-					},
-					{
-						elements = {
-							"repl",
-							"console",
-						},
-						size = 0.25,
-						position = "bottom",
-					},
-				},
-				controls = {
-					enabled = true,
-					element = "repl",
-				},
-				floating = {
-					border = "rounded",
-					mappings = {
-						close = { "q", "<Esc>" },
-					},
-				},
-			})
-		end,
-	}
-
-
 },
 
 })

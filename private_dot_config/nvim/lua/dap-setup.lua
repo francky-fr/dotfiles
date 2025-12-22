@@ -11,6 +11,17 @@
 -- - Messages temporaires qui s'effacent après 2 secondes
 
 local dap = require("dap")
+---------------------------------------------------------------------
+-- ADAPTER DELVE (MANQUANT !)
+---------------------------------------------------------------------
+dap.adapters.go = {
+  type = "server",
+  port = "${port}",
+  executable = {
+    command = "dlv",
+    args = { "dap", "-l", "127.0.0.1:${port}" },
+  },
+}
 
 ---------------------------------------------------------------------
 -- FONCTION MESSAGE TEMPORAIRE
@@ -175,19 +186,23 @@ end
 
 dap.configurations.go = {
   {
-    type = "go",
-    name = "Debug Go (cmd)",
-    request = "launch",
-    program = function()
-      if not last_go.program then
-        echo_temp("⚠️  Program not set! Use :GoDebugSet")
-        return vim.fn.getcwd() -- fallback sécurisé
-      end
-      return last_go.program
-    end,
-    args = function()
-      return last_go.args or {}
-    end,
+	  type = "go",
+	  name = "Debug Go (cmd)",
+	  request = "launch",
+	  program = function()
+		  if not last_go.program then
+			  echo_temp("⚠️  Program not set! Use :GoDebugSet")
+			  return vim.fn.getcwd() -- fallback sécurisé
+		  end
+		  return last_go.program
+	  end,
+	  args = function()
+		  return last_go.args or {}
+	  end,
+	  showLog = true,
+	  trace = "verbose",
+	  logOutput = "stdout",
+	  console = "internalConsole",
   },
 }
 
@@ -320,190 +335,100 @@ vim.keymap.set("n", "<F8>", dap.terminate, { desc = "DAP: terminate" })
 ---------------------------------------------------------------------
 local dapui = require("dapui")
 
----------------------------------------------------------------------
--- ÉTAT GLOBAL
----------------------------------------------------------------------
 _G.dapui_is_open = false
 
 ---------------------------------------------------------------------
 -- SETUP DAP-UI (CONFIG IDENTIQUE, FACTORISÉE)
 ---------------------------------------------------------------------
-local function setup_dapui()
-  dapui.setup({
-    layouts = {
-      -----------------------------------------------------------------
-      -- PANNEAU GAUCHE (FULL HEIGHT)
-      -----------------------------------------------------------------
-      {
-        elements = {
-          { id = "repl",        size = 0.30 },
-          { id = "console",     size = 0.20 },
-          { id = "watches",     size = 0.25 },
-          { id = "stacks",      size = 0.15 },
-          { id = "breakpoints", size = 0.10 },
-        },
-        size = 40,
-        position = "left",
-      },
+dapui.setup({
+	layouts = {
+		-----------------------------------------------------------------
+		-- PANNEAU GAUCHE (FULL HEIGHT)
+		-----------------------------------------------------------------
+		{
+			elements = {
+				{ id = "repl",        size = 0.30 },
+				{ id = "console",     size = 0.20 },
+				{ id = "watches",     size = 0.25 },
+				{ id = "stacks",      size = 0.15 },
+				{ id = "breakpoints", size = 0.10 },
+			},
+			size = 40,
+			position = "left",
+		},
 
-      -----------------------------------------------------------------
-      -- PANNEAU BAS (SOUS LE CODE UNIQUEMENT)
-      -----------------------------------------------------------------
-      {
-        elements = {
-          "scopes",
-        },
-        size = 15,
-        position = "bottom",
-      },
-    },
+		-----------------------------------------------------------------
+		-- PANNEAU BAS (SOUS LE CODE UNIQUEMENT)
+		-----------------------------------------------------------------
+		{
+			elements = {
+				"scopes",
+			},
+			size = 15,
+			position = "bottom",
+		},
+	},
 
-    controls = {
-      enabled = true,
-      element = "repl",
-    },
+	controls = {
+		enabled = true,
+		element = "repl",
+	},
 
-    floating = {
-      border = "rounded",
-      mappings = {
-        close = { "q", "<Esc>" },
-      },
-    },
-    expand_lines = false
-  })
-end
-
--- setup initial
-setup_dapui()
-
----------------------------------------------------------------------
--- RESIZE AUTO 30 % (INCHANGÉ)
----------------------------------------------------------------------
-local function dapui_apply_min_size()
-  if not _G.dapui_is_open then
-    return
-  end
-
-  local min_left   = math.floor(vim.o.columns * 0.30)
-  local min_bottom = math.floor(vim.o.lines   * 0.30)
-
-  for _, win in ipairs(vim.api.nvim_list_wins()) do
-    local buf = vim.api.nvim_win_get_buf(win)
-    local ft  = vim.bo[buf].filetype
-
-    if ft == "dapui-repl"
-      or ft == "dapui_console"
-      or ft == "dapui_watches"
-      or ft == "dapui_stacks"
-      or ft == "dapui_breakpoints" then
-      pcall(vim.api.nvim_win_set_width, win, min_left)
-    end
-
-    if ft == "dapui_scopes" then
-      pcall(vim.api.nvim_win_set_height, win, min_bottom)
-    end
-  end
-end
+	floating = {
+		border = "rounded",
+		mappings = {
+			close = { "q", "<Esc>" },
+		},
+	},
+	expand_lines = false
+})
 
 ---------------------------------------------------------------------
 -- OUVERTURE / FERMETURE AUTOMATIQUE
 ---------------------------------------------------------------------
 dap.listeners.after.event_initialized["dapui"] = function()
-  setup_dapui()                 -- 🔴 rappel explicite
-  dapui.open({ reset = true })
-  _G.dapui_is_open = true
-  vim.defer_fn(dapui_apply_min_size, 20)
+	vim.notify("dap.listeners.after.event_initialized")
+
+	dapui.open({ reset = true })
+	_G.dapui_is_open = true
+	-- vim.defer_fn(dapui_apply_min_size, 20)
 end
 
 dap.listeners.before.event_terminated["dapui"] = function()
-  dapui.close()
-  _G.dapui_is_open = false
+	vim.notify("dap.listeners.after.event_terminated")
+	dapui.close()
+	_G.dapui_is_open = false
 end
 
 dap.listeners.before.event_exited["dapui"] = function()
-  dapui.close()
-  _G.dapui_is_open = false
+	vim.notify("dap.listeners.after.event_exited")
+	dapui.close()
+	_G.dapui_is_open = false
 end
 
 ---------------------------------------------------------------------
 -- TOGGLE MANUEL
 ---------------------------------------------------------------------
 vim.keymap.set("n", "<leader>du", function()
-  if _G.dapui_is_open then
-    dapui.close()
-    _G.dapui_is_open = false
-  else
-    setup_dapui()               -- 🔴 rappel explicite
-    dapui.open({ reset = true })
-    _G.dapui_is_open = true
-    vim.defer_fn(dapui_apply_min_size, 20)
-  end
+	if _G.dapui_is_open then
+		vim.notify("<leader>du (starting state dpui is open)")
+		dapui.close()
+		_G.dapui_is_open = false
+	else
+		vim.notify("<leader>du (starting state dpui is not open)")
+		-- setup_dapui()
+		dapui.open({ reset = true })
+		_G.dapui_is_open = true
+		-- vim.defer_fn(dapui_apply_min_size, 20)
+	end
 end, { desc = "DAP UI: toggle" })
 
-
-
----------------------------------------------------------------------
--- DAP-UI : CONFIGURATION FINALE (TA VERSION)
----------------------------------------------------------------------
-local dapui = require("dapui")
-
----------------------------------------------------------------------
--- ÉTAT GLOBAL
----------------------------------------------------------------------
-_G.dapui_is_open = false
-
----------------------------------------------------------------------
--- TA CONFIG DAPUI (INCHANGÉE)
----------------------------------------------------------------------
-local function dapui_setup()
-  dapui.setup({
-    layouts = {
-      -----------------------------------------------------------------
-      -- PANNEAU GAUCHE (FULL HEIGHT)
-      -----------------------------------------------------------------
-      {
-        elements = {
-          { id = "repl",        size = 0.30 },
-          { id = "console",     size = 0.20 },
-          { id = "watches",     size = 0.25 },
-          { id = "stacks",      size = 0.15 },
-          { id = "breakpoints", size = 0.10 },
-        },
-        size = 40,
-        position = "left",
-      },
-
-      -----------------------------------------------------------------
-      -- PANNEAU BAS (SCOPES)
-      -----------------------------------------------------------------
-      {
-        elements = { "scopes" },
-        size = 15,
-        position = "bottom",
-      },
-    },
-
-    controls = {
-      enabled = true,
-      element = "repl",
-    },
-
-    floating = {
-      border = "rounded",
-      mappings = {
-        close = { "q", "<Esc>" },
-      },
-    },
-  })
-end
-
--- setup initial
-dapui_setup()
 
 ---------------------------------------------------------------------
 -- RESIZE AUTO 30 % (TA VERSION)
 ---------------------------------------------------------------------
 local function dapui_apply_min_size()
+		vim.notify("apply_min_size")
   if not _G.dapui_is_open then return end
 
   local min_left   = math.floor(vim.o.columns * 0.30)
@@ -530,41 +455,6 @@ end
 vim.api.nvim_create_autocmd("VimResized", {
   callback = dapui_apply_min_size,
 })
-
----------------------------------------------------------------------
--- OUVERTURE / FERMETURE AUTOMATIQUE (SEULE MODIF : setup AVANT open)
----------------------------------------------------------------------
-dap.listeners.after.event_initialized["dapui"] = function()
-  dapui_setup()                      -- ✅ AJOUT
-  dapui.open({ reset = true })
-  _G.dapui_is_open = true
-  vim.defer_fn(dapui_apply_min_size, 20)
-end
-
-dap.listeners.before.event_terminated["dapui"] = function()
-  dapui.close()
-  _G.dapui_is_open = false
-end
-
-dap.listeners.before.event_exited["dapui"] = function()
-  dapui.close()
-  _G.dapui_is_open = false
-end
-
----------------------------------------------------------------------
--- TOGGLE MANUEL (SEULE MODIF : setup AVANT open)
----------------------------------------------------------------------
-vim.keymap.set("n", "<leader>du", function()
-  if _G.dapui_is_open then
-    dapui.close()
-    _G.dapui_is_open = false
-  else
-    dapui_setup()                    -- ✅ AJOUT
-    dapui.open({ reset = true })
-    _G.dapui_is_open = true
-    vim.defer_fn(dapui_apply_min_size, 20)
-  end
-end, { desc = "DAP UI: toggle" })
 
 
 ---------------------------------------------------------------------
