@@ -168,15 +168,15 @@ vim.keymap.set("n", "dp", function()
   require("dap.ui.widgets").hover()
 end, { desc = "DAP: print variable under cursor" })
 
-vim.api.nvim_create_autocmd("FileType", {
-  pattern = "dap-float",
-  callback = function()
-    vim.keymap.set("n", "q", "<cmd>close<CR>", {
-      buffer = true,
-      silent = true,
-    })
-  end,
-})
+-- vim.api.nvim_create_autocmd("FileType", {
+--   pattern = "dap-float",
+--   callback = function()
+--     vim.keymap.set("n", "q", "<cmd>close<CR>", {
+--       buffer = true,
+--       silent = true,
+--     })
+--   end,
+-- })
 
 
 -- vim.keymap.set("n", "<leader>kg", function()

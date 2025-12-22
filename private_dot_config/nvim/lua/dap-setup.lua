@@ -19,7 +19,7 @@ dap.adapters.go = {
   port = "${port}",
   executable = {
     command = "dlv",
-    args = { "dap", "-l", "127.0.0.1:${port}" },
+    args = { "dap", "-l", "127.0.0.1:${port}" , "--log"},
   },
 }
 
@@ -199,10 +199,8 @@ dap.configurations.go = {
 	  args = function()
 		  return last_go.args or {}
 	  end,
-	  showLog = true,
-	  trace = "verbose",
-	  logOutput = "stdout",
-	  console = "internalConsole",
+	  -- mode = "debug",
+	  outputMode = "remote"
   },
 }
 
