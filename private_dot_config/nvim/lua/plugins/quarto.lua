@@ -1,16 +1,8 @@
 return {
-
-  ---------------------------------------------------------------------------
-  -- 1) Quarto
-  ---------------------------------------------------------------------------
   {
     "quarto-dev/quarto-nvim",
-    ft = { "quarto", "markdown" , "go"},
-
+    ft = { "quarto", "markdown" },
     config = function()
-      -----------------------------------------------------------------------
-      -- Initialisation Quarto (OBLIGATOIRE)
-      -----------------------------------------------------------------------
       require("quarto").setup({
         lspFeatures = {
           enabled = true,
@@ -22,24 +14,54 @@ return {
         },
       })
 
-      -----------------------------------------------------------------------
-      -- Mapping pour envoyer la cellule courante
-      -----------------------------------------------------------------------
-      vim.keymap.set("n", "<C-e>", "<cmd>QuartoSend<CR>", {
-        desc = "Quarto: Send current cell",
-        silent = true,
+      vim.keymap.set("n", "<leader>qp", function()
+        local file = vim.fn.expand("%:p")
+        vim.fn.jobstart({ "uv", "run", "quarto", "preview", file }, {
+          detach = true,
+          cwd = vim.fn.fnamemodify(file, ":h"),
+        })
+        vim.notify("Quarto preview lancé", vim.log.levels.INFO)
+      end, { desc = "Quarto: preview", silent = true })
+
+      vim.keymap.set("n", "<leader>qr", function()
+        local file = vim.fn.expand("%:p")
+        vim.fn.jobstart({ "uv", "run", "quarto", "render", file }, {
+          cwd = vim.fn.fnamemodify(file, ":h"),
+        })
+        vim.notify("Quarto render…", vim.log.levels.INFO)
+      end, { desc = "Quarto: render", silent = true })
+
+      vim.keymap.set("n", "<leader>qR", function()
+        local file = vim.fn.expand("%:p")
+        vim.fn.jobstart({ "uv", "run", "quarto", "render", file, "--cache-refresh" }, {
+          cwd = vim.fn.fnamemodify(file, ":h"),
+        })
+        vim.notify("Quarto render forcé (cache vidé)…", vim.log.levels.INFO)
+      end, { desc = "Quarto: render forcé", silent = true })
+
+      vim.api.nvim_create_autocmd("FileType", {
+        pattern = { "quarto" },
+        callback = function()
+          -- <C-s> : envoie la cellule courante → IPython
+          vim.keymap.set("n", "<C-s>", "<cmd>QuartoSend<CR>", {
+            buffer = true,
+            desc   = "Quarto: envoie la cellule → IPython",
+            silent = true,
+          })
+          -- ss : envoie la ligne courante → IPython
+          vim.keymap.set("n", "ss", "<Plug>SlimeLineSend", {
+            buffer = true,
+            desc   = "Quarto: envoie la ligne → IPython",
+            silent = true,
+          })
+        end,
       })
     end,
-
     dependencies = {
       "jmbuhr/otter.nvim",
       "jpalardy/vim-slime",
     },
   },
-
-  ---------------------------------------------------------------------------
-  -- 2) Jupytext (ouvrir .ipynb en Quarto)
-  ---------------------------------------------------------------------------
   {
     "GCBallesteros/jupytext.nvim",
     opts = {
@@ -49,58 +71,15 @@ return {
           style = "quarto",
           force_ft = "quarto",
         },
-        r = {
-          extension = "qmd",
-          style = "quarto",
-          force_ft = "quarto",
-        },
       },
     },
   },
-
-  ---------------------------------------------------------------------------
-  -- 3) Slime (envoyer code au REPL)
-  ---------------------------------------------------------------------------
-  {
-	  "jpalardy/vim-slime",
-
-	  init = function()
-		  -- vim.g.slime_target = "neovim"
-		  vim.g.slime_target = "tmux"
-		  vim.g.slime_default_config = {
-			  -- target_pane = "go-repl-lab:repls.0",
-			  -- target_pane = "go-repl-lab:repls.2",
-			  -- target_pane = "go-repl-lab:yaegi-A.0",
-			  -- target_pane = "go-repl-lab:gomacro-A.0",
-			  target_pane = "go-repl-lab:yaegi-B.0",
-			  socket_name = "default",
-		  }
-		  vim.g.slime_dont_ask_default = 1
-		  vim.g.slime_no_mappings = true
-		  vim.g.slime_bracketed_paste = 1
-	  end,
-
-	  config = function()
-
-		  vim.keymap.set("v", "rr", "<Plug>SlimeRegionSend", { silent = true })
-		  vim.keymap.set("n", "rr", "<Plug>SlimeLineSend", { silent = true })
-		  vim.keymap.set("n", "rf", ":%SlimeSend<CR>", { silent = true })
-		  vim.keymap.set("n", "r", "<nop>", { noremap = true })
-
-	  end,
-  },
-
-  ---------------------------------------------------------------------------
-  -- 4) Coller facilement des images
-  ---------------------------------------------------------------------------
   {
     "HakonHarnes/img-clip.nvim",
     event = "BufEnter",
     ft = { "markdown", "quarto", "latex" },
     opts = {
-      default = {
-        dir_path = "img",
-      },
+      default = { dir_path = "img" },
       filetypes = {
         markdown = {
           url_encode_path = true,
@@ -122,10 +101,6 @@ return {
       })
     end,
   },
-
-  ---------------------------------------------------------------------------
-  -- 5) Nabla (render math inline)
-  ---------------------------------------------------------------------------
   {
     "jbyuki/nabla.nvim",
     keys = {
@@ -136,6 +111,4 @@ return {
       },
     },
   },
-
 }
-

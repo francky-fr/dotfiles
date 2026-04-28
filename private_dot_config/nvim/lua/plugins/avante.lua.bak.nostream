@@ -1,0 +1,58 @@
+return {
+  "yetone/avante.nvim",
+  event = "VeryLazy",
+  lazy = false,
+  version = false,
+  opts = {
+    provider = "openai",
+    providers = {
+      openai = {
+        endpoint = "http://localhost:8666/v1/chat/completions",
+        model = "qwen2.5-coder-14b",
+        api_key_name = "OPENAI_API_KEY",
+        parse_curl_args = function(opts, code_opts)
+          return {
+            url = "http://localhost:8666/v1/chat/completions",
+            headers = {
+              ["Content-Type"] = "application/json",
+            },
+            body = {
+              model = "qwen2.5-coder-14b",
+              messages = opts.messages,
+              temperature = 0.2,
+              max_tokens = 1024,
+              stream = false,
+            },
+          }
+        end,
+      },
+    },
+  },
+  build = "make",
+  dependencies = {
+    "stevearc/dressing.nvim",
+    "nvim-lua/plenary.nvim",
+    "MunifTanjim/nui.nvim",
+    "nvim-tree/nvim-web-devicons",
+    {
+      "HakonHarnes/img-clip.nvim",
+      event = "VeryLazy",
+      opts = {
+        default = {
+          embed_image_as_base64 = false,
+          prompt_for_file_name = false,
+          drag_and_drop = {
+            insert_mode = true,
+          },
+        },
+      },
+    },
+    {
+      "MeanderingProgrammer/render-markdown.nvim",
+      opts = {
+        file_types = { "markdown", "Avante" },
+      },
+      ft = { "markdown", "Avante" },
+    },
+  },
+}

@@ -159,3 +159,8 @@ esac
 
 umask 022
 . "$HOME/.cargo/env"
+
+# Added by LM Studio CLI (lms)
+export PATH="$PATH:/home/franck/.lmstudio/bin"
+# End of LM Studio CLI section
+

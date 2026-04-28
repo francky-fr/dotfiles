@@ -1,0 +1,85 @@
+return {
+	{
+		"kndndrj/nvim-dbee",
+		dependencies = {
+			"MunifTanjim/nui.nvim",
+		},
+		build = function()
+			-- Installe le binaire helper en Go nécessaire pour les drivers (SQLite, etc.)
+			require("dbee").install()
+		end,
+		config = function()
+			local dbee = require("dbee")
+			local sources = require("dbee.sources")
+
+			dbee.setup({
+				-- Configuration des sources de données
+				sources = {
+					sources.MemorySource:new({
+						{
+							name = "Behatoki - Tmp default",
+							type = "sqlite",
+							url = vim.fn.expand("/tmp/behatoki/behatoki.db"), 
+						},
+						{
+							name = "Behatoki - Projects",
+							type = "sqlite",
+							url = vim.fn.expand("/home/franck/projects_behatoki/db/behatoki.db"), 
+						},
+						{
+							name = "Behatoki Superset - Data FL",
+							type = "postgres",
+							url = vim.fn.expand("postgres://behatoki_fl@10.200.1.1:5432/behatoki_fl?sslmode=disable"), 
+						},
+						{
+							name = "Behatoki Superset - Admin",
+							type = "postgres",
+							url = vim.fn.expand("postgres://superset@10.200.1.1:5432/superset?sslmode=disable"), 
+						},
+						{
+							name = "DuckDB",
+							type = "duckdb",
+							url = ":memory:"
+						},
+					}),
+				},
+				-- Configuration de l'interface
+				ui = {
+					width = 35, -- Largeur de la barre latérale
+					position = "left",
+				},
+			})
+
+			-- Keymaps rapides pour l'usage quotidien
+			vim.keymap.set("n", "<leader>db", function() dbee.toggle() end, { desc = "Toggle DBee UI" })
+
+			-- 1. <C-e> en mode Normal : Exécute tout le buffer (équivalent à :%DB)
+			-- vim.keymap.set('n', '<C-e>', function()
+				-- dbee.execute_buffer()
+			-- end, { desc = "DBee: Execute whole buffer" })
+
+			-- 2. <C-e> en mode Visuel : Exécute la sélection (équivalent à db#op_exec())
+			-- vim.keymap.set('v', '<C-e>', function()
+			-- 	dbee.execute_selection()
+			-- end, { desc = "DBee: Execute selection" })
+			-- vim.keymap.set('v', '<C-e>', function()
+				-- On appelle la fonction via le sous-module api
+				-- require("dbee.api").execute_selection()
+			-- end, { desc = "DBee: Execute selection" })
+
+			vim.keymap.set('v', '<C-e>', function()
+				-- Sortir du mode visuel pour fixer les marques '< et '>
+				vim.cmd('normal! "vy')
+				local selection = vim.fn.getreg('v')
+				require("dbee").execute(selection)
+			end, { desc = "DBee: Execute selection" })
+
+			-- 3. ee en mode Normal : Exécute uniquement la ligne sous le curseur (équivalent à :.DB)
+			-- Note : dbee n'a pas de fonction "execute_line" native, on utilise donc une petite astuce
+			vim.keymap.set('n', 'ee', function()
+				local line = vim.api.nvim_get_current_line()
+				dbee.execute(line)
+			end, { desc = "DBee: Execute current line" })
+		end,
+	},
+}

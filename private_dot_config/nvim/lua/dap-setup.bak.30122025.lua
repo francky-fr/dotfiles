@@ -77,13 +77,12 @@ vim.api.nvim_create_autocmd("User", {
 vim.o.statusline = vim.o.statusline .. "%{v:lua.dap_status()}"
 
 ---------------------------------------------------------------------
--- ÉTAT MÉMOIRE : DERNIÈRE COMMANDE GO (exe OU test)
+-- ÉTAT MÉMOIRE : DERNIÈRE COMMANDE GO
 ---------------------------------------------------------------------
 
 local last_go = {
   program = nil,
   args = {},
-  is_test = false,  -- ← NOUVEAU : indique si c'est un test
 }
 
 ---------------------------------------------------------------------
@@ -136,7 +135,7 @@ dap.restart = function(...)
     return
   end
   
-  -- Vérifier qu'une session existe et est initialisée
+  -- Vérifier qu'une smeession existe et est initialisée
   local session = dap.session()
   if not session then
     echo_temp("⚠️  Pas de session active pour restart")
@@ -170,52 +169,32 @@ dap.restart = function(...)
 end
 
 ---------------------------------------------------------------------
--- CONFIGURATION DAP GO (avec validation) - NOUVEAU : 2 configs
+-- CONFIGURATION DAP GO (avec validation)
 ---------------------------------------------------------------------
 
 dap.configurations.go = {
-  -- Config 1 : Lancer l'exécutable
   {
-    type = "go",
-    name = "Debug Go (cmd)",
-    request = "launch",
-    program = function()
-      if not last_go.program then
-        echo_temp("⚠️  Program not set! Use :GoDebugSet")
-        return vim.fn.getcwd() -- fallback sécurisé
-      end
-      return last_go.program
-    end,
-    args = function()
-      return last_go.args or {}
-    end,
-    buildFlags = "-gcflags='all=-N -l'",
-    outputMode = "remote",
-    console = 'integratedTerminal'
-  },
-  
-  -- Config 2 : Lancer les tests (NOUVEAU)
-  {
-    type = "go",
-    name = "Debug Go Tests",
-    request = "launch",
-    mode = "test",
-    program = function()
-      if not last_go.program then
-        echo_temp("⚠️  Program not set! Use :GoDebugSet")
-        return vim.fn.getcwd() -- fallback sécurisé
-      end
-      return last_go.program
-    end,
-    args = function()
-      return last_go.args or {}
-    end,
-    buildFlags = "-gcflags='all=-N -l'",
+	  type = "go",
+	  name = "Debug Go (cmd)",
+	  request = "launch",
+	  program = function()
+		  if not last_go.program then
+			  echo_temp("⚠️  Program not set! Use :GoDebugSet")
+			  return vim.fn.getcwd() -- fallback sécurisé
+		  end
+		  return last_go.program
+	  end,
+	  args = function()
+		  return last_go.args or {}
+	  end,
+	  buildFlags = "-gcflags='all=-N -l'",
+	  outputMode = "remote",
+	  console = 'integratedTerminal'
   },
 }
 
 ---------------------------------------------------------------------
--- TELESCOPE : DÉCOUVERTE DYNAMIQUE DES PACKAGES GO
+-- TELESCOPE : CHOISIR cmd/*
 ---------------------------------------------------------------------
 
 vim.api.nvim_create_user_command("GoDebugSet", function()
@@ -225,59 +204,10 @@ vim.api.nvim_create_user_command("GoDebugSet", function()
   local actions = require("telescope.actions")
   local action_state = require("telescope.actions.state")
 
-  -- Trouver tous les dossiers contenant des fichiers .go
-  local handle = io.popen("find . -type f -name '*.go' -not -path '*/.*' 2>/dev/null | xargs -n1 dirname | sort -u")
-  local result = handle:read("*a")
-  handle:close()
-
-  local go_packages = {}
-  for dir in result:gmatch("[^\n]+") do
-    -- Nettoyer le chemin (./ → rien)
-    dir = dir:gsub("^%./", "")
-    if dir ~= "." and dir ~= "" then
-      table.insert(go_packages, dir)
-    end
-  end
-
-  -- Pour chaque package, vérifier ce qu'il contient
-  local entries = {}
-  for _, pkg in ipairs(go_packages) do
-    local has_main = vim.fn.filereadable(pkg .. "/main.go") == 1
-    local has_tests = vim.fn.glob(pkg .. "/*_test.go") ~= ""
-
-    if has_main then
-      table.insert(entries, { 
-        display = pkg .. " (main)", 
-        path = pkg, 
-        is_test = false 
-      })
-    end
-
-    if has_tests then
-      table.insert(entries, { 
-        display = pkg .. " (tests)", 
-        path = pkg, 
-        is_test = true 
-      })
-    end
-  end
-
-  -- Tri alphabétique
-  table.sort(entries, function(a, b)
-    return a.display < b.display
-  end)
-
   pickers.new({}, {
-    prompt_title = "Go packages (main + tests)",
-    finder = finders.new_table({
-      results = entries,
-      entry_maker = function(entry)
-        return {
-          value = entry,
-          display = entry.display,
-          ordinal = entry.display,
-        }
-      end,
+    prompt_title = "Go commands (cmd/*)",
+    finder = finders.new_oneshot_job({
+      "find", "cmd", "-maxdepth", "2", "-type", "d",
     }),
     sorter = conf.generic_sorter({}),
     attach_mappings = function(_, map)
@@ -285,24 +215,15 @@ vim.api.nvim_create_user_command("GoDebugSet", function()
         local entry = action_state.get_selected_entry()
         actions.close(bufnr)
 
-        local selected = entry.value
-        last_go.program = vim.fn.getcwd() .. "/" .. selected.path
-        last_go.is_test = selected.is_test
+        last_go.program = vim.fn.getcwd() .. "/" .. entry[1]
 
-        -- Demander les args (optionnel pour les tests)
         local args = vim.fn.input(
           "Args: ",
           table.concat(last_go.args, " ")
         )
 
         last_go.args = args ~= "" and vim.split(args, " ") or {}
-        
-        -- Lancer la bonne config selon is_test
-        if last_go.is_test then
-          dap.run(dap.configurations.go[2])  -- Config tests
-        else
-          dap.run(dap.configurations.go[1])  -- Config exe
-        end
+        dap.run(dap.configurations.go[1])
       end)
       return true
     end,
@@ -310,7 +231,7 @@ vim.api.nvim_create_user_command("GoDebugSet", function()
 end, {})
 
 ---------------------------------------------------------------------
--- RELANCER SANS PROMPT (utilise last_go.is_test)
+-- RELANCER SANS PROMPT
 ---------------------------------------------------------------------
 
 vim.api.nvim_create_user_command("GoDebugRun", function()
@@ -318,13 +239,7 @@ vim.api.nvim_create_user_command("GoDebugRun", function()
     echo_temp("No Go debug configuration yet")
     return
   end
-  
-  -- Lancer la bonne config selon is_test
-  if last_go.is_test then
-    dap.run(dap.configurations.go[2])  -- Config tests
-  else
-    dap.run(dap.configurations.go[1])  -- Config exe
-  end
+  dap.run(dap.configurations.go[1])
 end, {})
 
 ---------------------------------------------------------------------
@@ -392,7 +307,7 @@ vim.keymap.set("n", "<F6>", function()
   
   dap.terminate()
   vim.wait(200, function()
-    return dap.session() == nil
+	  return dap.session() == nil
   end)
   dap_start_or_continue()
 end, { desc = "DAP: restart (protected)" })
@@ -558,6 +473,40 @@ vim.keymap.set("c", "<CR>", function()
   return "<CR>"
 end, { expr = true })
 
+-- vim.api.nvim_create_autocmd("FileType", {
+--   pattern = { "dapui_console" },
+--   callback = function()
+--     vim.opt_local.wrap = true
+--     vim.opt_local.linebreak = true
+--     vim.opt_local.breakindent = true
+--     vim.opt_local.showbreak = "↪ "
+--   end,
+-- })
+
+-- vim.api.nvim_create_autocmd("FileType", {
+--   pattern = { "dapui_console" },
+--   callback = function()
+--     vim.opt_local.wrap = true
+--     vim.opt_local.linebreak = true
+--     vim.opt_local.scrolloff = 0
+--     vim.opt_local.sidescrolloff = 0
+--     vim.opt_local.sidescroll = 0
+--   end,
+-- })
+-- vim.api.nvim_create_autocmd({ "BufWinEnter", "WinEnter" }, {
+--   callback = function()
+--     local win = vim.api.nvim_get_current_win()
+--     local buf = vim.api.nvim_win_get_buf(win)
+--
+--     if vim.bo[buf].filetype == "dapui_console" then
+--       vim.api.nvim_win_set_option(win, "wrap", true)
+--       vim.api.nvim_win_set_option(win, "linebreak", true)
+--       vim.api.nvim_win_set_option(win, "breakindent", true)
+--       vim.api.nvim_win_set_option(win, "showbreak", "↪ ")
+--     end
+--   end,
+-- })
+
 local function apply_repl_wrap()
   for _, win in ipairs(vim.api.nvim_list_wins()) do
     local buf = vim.api.nvim_win_get_buf(win)
@@ -583,6 +532,104 @@ vim.api.nvim_create_autocmd({ "WinEnter", "VimResized" }, {
   callback = apply_repl_wrap,
 })
 
+
+-- dap.listeners.after.event_output["dapui_console"] = function(_, body)
+--   if not body or not body.output then
+--     return
+--   end
+--
+--   -- catégories typiques : stdout | stderr | console
+--   local category = body.category or "console"
+--
+--   -- écrire explicitement dans la console dap-ui
+--   dapui.eval(body.output, { context = category })
+-- end
+
+
+
+-- local function enable_dap_completion(bufnr)
+--   local cmp = require("cmp")
+--   
+--   -- Vérifier qu'une session DAP existe
+--   if not require("dap").session() then
+--     vim.notify("⚠️  Pas de session DAP active", vim.log.levels.WARN)
+--     return false
+--   end
+--
+--   -- Configuration CMP pour ce buffer
+--   -- cmp.setup.buffer({
+--   --   sources = cmp.config.sources({
+--   --     { name = 'nvim_lsp', priority = 1000 },   -- gopls
+--   --     { name = 'buffer',   priority = 500 },
+--   --   }),
+--   --   completion = {
+--   --     autocomplete = { 
+--   --       cmp.TriggerEvent.TextChanged,
+--   --       cmp.TriggerEvent.InsertEnter 
+--   --     },
+--   --   },
+--   -- })
+--     cmp.setup.buffer({
+--     sources = cmp.config.sources({
+--       { name = "nvim_lsp" },
+--     }, {
+--       { name = "buffer" },
+--     }),
+--     completion = {
+--       autocomplete = {
+--         cmp.TriggerEvent.TextChanged,
+--         cmp.TriggerEvent.InsertEnter,
+--       },
+--     },
+--   })
+--
+--   return true
+-- end
+
+-- vim.keymap.set("n", "<leader>dd", function()
+--   -- 1. Créer le buffer
+--   vim.cmd("vnew")
+--   local bufnr = vim.api.nvim_get_current_buf()
+--   vim.api.nvim_buf_set_name(bufnr, vim.fn.getcwd() .. "/dap-input.go")
+--   
+--   -- 2. Configuration buffer
+--   vim.bo[bufnr].buftype = ""
+--   vim.bo[bufnr].swapfile = false
+--   vim.bo[bufnr].bufhidden = "wipe"
+--   vim.bo[bufnr].filetype = "go"
+--   
+--   -- 3. ⚠️ ATTENDRE que gopls s'attache
+--   vim.defer_fn(function()
+--     -- Vérifier l'attachement LSP
+--     local clients = vim.lsp.get_clients({ bufnr = bufnr, name = "gopls" })
+--     
+--     if #clients == 0 then
+--       vim.notify("⚠️  gopls non attaché, retry...", vim.log.levels.WARN)
+--       -- Retry une fois après 200ms supplémentaires
+--       vim.defer_fn(function()
+--         clients = vim.lsp.get_clients({ bufnr = bufnr, name = "gopls" })
+--         if #clients == 0 then
+--           vim.notify("❌ gopls failed to attach", vim.log.levels.ERROR)
+--           return
+--         end
+--         enable_dap_completion(bufnr)
+--         vim.cmd("startinsert")
+--       end, 200)
+--       return
+--     end
+--     
+--     -- gopls est attaché, configurer CMP
+--     if enable_dap_completion(bufnr) then
+--       vim.notify("✅ Debug input ready", vim.log.levels.INFO)
+--     end
+--     
+--     vim.cmd("startinsert")
+--   end, 300)  -- Délai initial pour l'attachement LSP
+--   
+-- end, { desc = "DAP: debug input buffer" })
+--
+
+
 -- ===================================================================
 -- PARTIE 1 : Enregistrer la source CMP custom pour variables runtime
 -- ===================================================================
@@ -598,8 +645,13 @@ cmp.register_source("dap_vars", require("cmp_source_dap_vars"))
 vim.keymap.set("n", "<leader>dd", function()
   -- 1. Créer le buffer
   vim.cmd("vnew")
+  -- local bufnr = vim.api.nvim_get_current_buf()
   
   -- 2. Nom dans le projet (pas de préfixe ".")
+  -- local temp_name = vim.fn.getcwd() .. "/debug-input-" .. os.time() .. ".go"
+  -- FL POUR FAIRE MARCHE 2312
+  -- local temp_name = vim.fn.getcwd() .. "/cmd/debug-input-1766500412.go"
+  -- vim.api.nvim_buf_set_name(bufnr, temp_name)
   local path = vim.fn.getcwd() .. "/cmd/debug-input-1766500412.go"
   vim.cmd.edit(vim.fn.fnameescape(path))
   local bufnr = vim.api.nvim_get_current_buf()
@@ -631,6 +683,11 @@ vim.keymap.set("n", "<leader>dd", function()
     "\t",
     "}",
   }
+  
+  -- vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
+  -- 
+  -- -- 5. Curseur sur la ligne vide (ligne 14)
+  -- vim.api.nvim_win_set_cursor(0, {14, 1})
   
   -- 6. Attendre l'attachement gopls + configurer CMP
   vim.defer_fn(function()
@@ -702,6 +759,37 @@ function setup_dap_completion(bufnr)
     },
   })
 end
+
+-- ===================================================================
+-- PARTIE 4 : Quick import (Solution B - bonus)
+-- ===================================================================
+
+-- Ajouter ce mapping dans le buffer debug pour importer rapidement
+-- vim.api.nvim_create_autocmd("BufEnter", {
+--   pattern = "*/debug-input-*.go",
+--   callback = function()
+--     local bufnr = vim.api.nvim_get_current_buf()
+--     
+--     -- Mapping pour import rapide (insert mode uniquement)
+--     vim.keymap.set("i", "<C-i>", function()
+--       local pkg = vim.fn.input("Import package: ")
+--       if pkg ~= "" then
+--         local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+--         
+--         -- Trouver la ligne "import ("
+--         for i, line in ipairs(lines) do
+--           if line:match("^import %(") then
+--             -- Ajouter l'import
+--             vim.api.nvim_buf_set_lines(bufnr, i, i, false, {'\t"' .. pkg .. '"'})
+--             vim.notify("✅ Importé: " .. pkg, vim.log.levels.INFO)
+--             break
+--           end
+--         end
+--       end
+--     end, { buffer = bufnr, desc = "Quick import package" })
+--     
+--   end,
+-- })
 
 -- ===================================================================
 -- ENVOI AU REPL DAP
