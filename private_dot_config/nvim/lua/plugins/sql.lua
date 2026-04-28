@@ -22,15 +22,13 @@ return {
             on_stdout = function(_, data)
               if not data then return end
               for _, line in ipairs(data) do
-                -- Le script envoie "REMOTE:url" uniquement en mode distant
                 if line:match("^REMOTE:") then
                   local url = line:gsub("^REMOTE:", "")
-                  -- Affiche uniquement la première fois de la session Neovim
                   if not vim.g.duckdb_server_notified then
                     vim.g.duckdb_server_notified = true
                     vim.schedule(function()
                       vim.notify(
-                        "DuckDB distant — ouvre dans ton navigateur :\n" .. url,
+                        "DuckDB — ouvre dans ton navigateur :\n" .. url,
                         vim.log.levels.INFO,
                         { title = "DuckDB" }
                       )
@@ -67,14 +65,6 @@ return {
         send_sql_lines(line, line)
       end
 
-      local function reopen()
-        vim.fn.jobstart(
-          { "uv", "run", "python3", "-c",
-            "import webbrowser; webbrowser.open('file:///tmp/duckdb_result.html')" },
-          { detach = true }
-        )
-      end
-
       vim.api.nvim_create_autocmd("FileType", {
         pattern = { "sql" },
         callback = function()
@@ -86,11 +76,6 @@ return {
           vim.keymap.set("n", "ee", send_current_line, {
             buffer = true,
             desc   = "DuckDB: ligne courante → navigateur",
-            silent = true,
-          })
-          vim.keymap.set("n", "<leader>do", reopen, {
-            buffer = true,
-            desc   = "DuckDB: rouvre le résultat",
             silent = true,
           })
         end,
