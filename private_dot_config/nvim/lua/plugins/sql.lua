@@ -19,9 +19,34 @@ return {
           { "uv", "run", "python3", script, get_db_path() },
           {
             stdin = "pipe",
+            on_stdout = function(_, data)
+              if not data then return end
+              for _, line in ipairs(data) do
+                -- Le script envoie "REMOTE:url" uniquement en mode distant
+                if line:match("^REMOTE:") then
+                  local url = line:gsub("^REMOTE:", "")
+                  -- Affiche uniquement la première fois de la session Neovim
+                  if not vim.g.duckdb_server_notified then
+                    vim.g.duckdb_server_notified = true
+                    vim.schedule(function()
+                      vim.notify(
+                        "DuckDB distant — ouvre dans ton navigateur :\n" .. url,
+                        vim.log.levels.INFO,
+                        { title = "DuckDB" }
+                      )
+                    end)
+                  end
+                end
+              end
+            end,
             on_stderr = function(_, data)
-              if data and data[1] ~= "" then
-                vim.notify(table.concat(data, "\n"), vim.log.levels.ERROR)
+              if data then
+                local msg = table.concat(data, "\n"):gsub("^%s*(.-)%s*$", "%1")
+                if msg ~= "" then
+                  vim.schedule(function()
+                    vim.notify("DuckDB: " .. msg, vim.log.levels.ERROR)
+                  end)
+                end
               end
             end,
           }
@@ -53,19 +78,16 @@ return {
       vim.api.nvim_create_autocmd("FileType", {
         pattern = { "sql" },
         callback = function()
-          -- <C-e> : envoie la sélection visuelle → DuckDB → navigateur
           vim.keymap.set("v", "<C-e>", send_selection, {
             buffer = true,
             desc   = "DuckDB: sélection → navigateur",
             silent = true,
           })
-          -- ee : envoie la ligne courante → DuckDB → navigateur
           vim.keymap.set("n", "ee", send_current_line, {
             buffer = true,
             desc   = "DuckDB: ligne courante → navigateur",
             silent = true,
           })
-          -- rouvre le dernier résultat
           vim.keymap.set("n", "<leader>do", reopen, {
             buffer = true,
             desc   = "DuckDB: rouvre le résultat",

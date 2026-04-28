@@ -76,16 +76,22 @@ esac
 if [ -x /usr/bin/dircolors ]; then
     test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
     alias ls='ls --color=auto'
+    #alias dir='dir --color=auto'
+    #alias vdir='vdir --color=auto'
+
+    #alias grep='grep --color=auto'
+    #alias fgrep='fgrep --color=auto'
+    #alias egrep='egrep --color=auto'
 fi
 
 # colored GCC warnings and errors
 #export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01'
 
 # some more ls aliases
+#alias ll='ls -l'
+#alias la='ls -A'
+#alias l='ls -CF'
 alias nv='nvim'
-alias dbui='nvim +DBUI'
-alias dbui_admin='WITH_ADMIN_DB=1 nvim +DBUI'
-alias git='LANG=en_GB git'
 
 # Alias definitions.
 # You may want to put all your additions into a separate file like
@@ -106,61 +112,6 @@ if ! shopt -oq posix; then
     . /etc/bash_completion
   fi
 fi
-
-# Add paths if the directories exist
-for dir in \
-  "$HOME/.local/bin" \
-  "$HOME/.npm-global/bin" \
-  "/usr/bin/Postman" \
-  "/usr/local/go/bin"
-do
-  [ -d "$dir" ] && PATH="$PATH:$dir"
-done
-export PATH
-
-if [ -d "$HOME/.bash_completions" ]; then
-  for file in "$HOME"/.bash_completions/*.bash; do
-    [ -r "$file" ] && source "$file"
-  done
-fi
-
-if command -v pipx &> /dev/null && command -v register-python-argcomplete &> /dev/null; then
-    eval "$(register-python-argcomplete pipx)"
-fi
-
-if [ -d "$HOME/.bash_completions" ]; then
-  for file in "$HOME"/.bash_completions/*.bash; do
-    [ -r "$file" ] && source "$file"
-  done
-fi
-
-if command -v pipx &> /dev/null && command -v register-python-argcomplete &> /dev/null; then
-    eval "$(register-python-argcomplete pipx)"
-fi
-
-if [ -x /home/linuxbrew/.linuxbrew/bin/brew ]; then
-  eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-fi
-
-
-# Load Angular CLI autocompletion.
-if command -v ng &> /dev/null; then
-    source <(ng completion script)
-fi
-
-
-# pnpm
-export PNPM_HOME="/home/franck/.local/share/pnpm"
-case ":$PATH:" in
-  *":$PNPM_HOME:"*) ;;
-  *) export PATH="$PNPM_HOME:$PATH" ;;
-esac
-# pnpm end
-
-umask 022
-. "$HOME/.cargo/env"
-
-# Added by LM Studio CLI (lms)
-export PATH="$PATH:/home/franck/.lmstudio/bin"
-# End of LM Studio CLI section
+export PATH="$HOME/.local/bin:$PATH"
+export PATH="/usr/local/go/bin:$PATH"
 
