@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Wezterm Unix
+Exec=wezterm start --class wezterm-unix --domain unix
+Icon=processor
+Terminal=false
+Type=Application
+Icon=/home/franck/.local/share/icons/wezterm_unix.png
+StartupWMClass=wezterm-unix
