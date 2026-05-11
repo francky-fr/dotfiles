@@ -1,6 +1,6 @@
 [Desktop Entry]
 Name=Wezterm FlxDev 
-Exec=wezterm start --class wezterm-flxdev --domain flxdev 
+Exec=wezterm start --class wezterm-flxdev --domain flxdev --attach
 Icon=processor
 Terminal=false
 Type=Application

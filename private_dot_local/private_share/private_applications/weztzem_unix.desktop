@@ -1,6 +1,6 @@
 [Desktop Entry]
 Name=Wezterm Unix
-Exec=wezterm start --class wezterm-unix --domain unix
+Exec=wezterm start --class wezterm-unix --domain unix --attach
 Icon=processor
 Terminal=false
 Type=Application
