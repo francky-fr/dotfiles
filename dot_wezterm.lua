@@ -99,7 +99,6 @@ return {
 	font = wezterm.font("JetBrains Mono", { weight = "Bold", italic = false}),
 	font_size = 9,
 	adjust_window_size_when_changing_font_size = false,
-	enable_touch_events= true,
 
 	enable_wayland = false
 }

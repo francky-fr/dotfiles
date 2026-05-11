@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Wezterm FlxDev 
+Exec=wezterm start --class wezterm-flxdev --domain flxdev 
+Icon=processor
+Terminal=false
+Type=Application
+Icon=/home/franck/.local/share/icons/wezterm_flxdev.png
+StartupWMClass=wezterm-flxdev
