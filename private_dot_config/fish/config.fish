@@ -22,8 +22,4 @@ umask 022
 # Created by `pipx` on 2025-11-24 10:46:19
 set PATH $PATH /home/franck/.local/bin
 
-# Added by LM Studio CLI (lms)
-set -gx PATH $PATH /home/franck/.lmstudio/bin
-# End of LM Studio CLI section
-
 alias dbee="nvim -c 'Dbee open'"
